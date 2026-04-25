@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useTaskStore } from '../stores/tasks'
+import { storeToRefs } from 'pinia'
 import { TASK_PRIORITIES, TASK_CATEGORIES } from '../helpers/constants'
 import AppLayout from '../components/layout/AppLayout.vue'
 import TaskList from '../components/tasks/TaskList.vue'
@@ -9,9 +10,9 @@ import TaskList from '../components/tasks/TaskList.vue'
 const router = useRouter()
 const route = useRoute()
 const taskStore = useTaskStore()
+const { filter, loading, error, stats } = storeToRefs(taskStore)
 
 const showModal = ref(false)
-const isFetching = ref(false)
 
 const newTask = ref({
   title: '',
@@ -27,9 +28,7 @@ const syncFilter = () => {
 }
 
 onMounted(async () => {
-  isFetching.value = true
   await taskStore.fetchTasks()
-  isFetching.value = false
   syncFilter()
 })
 
@@ -49,8 +48,13 @@ const dashboardTitle = () =>
 <template>
   <AppLayout>
     <!-- Loading state -->
-    <div v-if="isFetching" class="flex items-center justify-center py-20">
-      <p class="text-gray-400 text-sm">Loading tasks...</p>
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <p class="text-gray-400 text-sm animate-pulse">Loading tasks...</p>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="error" class="flex items-center justify-center py-20">
+      <p class="text-red-500 text-sm">{{ error }}</p>
     </div>
 
     <template v-else>

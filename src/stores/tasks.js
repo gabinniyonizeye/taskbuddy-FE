@@ -5,7 +5,10 @@ import api from '../helpers/api'
 export const useTaskStore = defineStore('tasks', () => {
   const tasks = ref([])
   const filter = ref('all')
+  const loading = ref(false)
+  const error = ref('')
 
+  // Getters
   const filteredTasks = computed(() => {
     if (!filter.value || filter.value === 'all') {
       return tasks.value
@@ -15,6 +18,8 @@ export const useTaskStore = defineStore('tasks', () => {
     const f = filter.value.replace('-', '_').toUpperCase()
     return tasks.value.filter(t => t.status === f)
   })
+
+  const byStatus = computed(() => s => tasks.value.filter(t => t.status === s))
 
   const stats = computed(() => {
     const today = new Date().toISOString().split('T')[0]
@@ -33,10 +38,15 @@ export const useTaskStore = defineStore('tasks', () => {
 
   async function fetchTasks() {
     try {
+      loading.value = true
+      error.value = ''
       const res = await api.get('/tasks')
       tasks.value = res.data
     } catch (e) {
+      error.value = e.response?.data?.message || 'Failed to load tasks'
       tasks.value = []
+    } finally {
+      loading.value = false
     }
   }
 
@@ -45,7 +55,7 @@ export const useTaskStore = defineStore('tasks', () => {
       const res = await api.post('/tasks', task)
       tasks.value.push(res.data)
     } catch (e) {
-      console.error('Failed to add task', e)
+      error.value = e.response?.data?.message || 'Failed to add task'
     }
   }
 
@@ -55,7 +65,7 @@ export const useTaskStore = defineStore('tasks', () => {
       const i = tasks.value.findIndex(t => t.id === updated.id)
       if (i !== -1) tasks.value[i] = res.data
     } catch (e) {
-      console.error('Failed to update task', e)
+      error.value = e.response?.data?.message || 'Failed to update task'
     }
   }
 
@@ -64,9 +74,9 @@ export const useTaskStore = defineStore('tasks', () => {
       await api.delete(`/tasks/${id}`)
       tasks.value = tasks.value.filter(t => t.id !== id)
     } catch (e) {
-      console.error('Failed to delete task', e)
+      error.value = e.response?.data?.message || 'Failed to delete task'
     }
   }
 
-  return { tasks, filter, filteredTasks, stats, fetchTasks, addTask, updateTask, deleteTask }
+  return { tasks, filter, loading, error, filteredTasks, byStatus, stats, fetchTasks, addTask, updateTask, deleteTask }
 })
